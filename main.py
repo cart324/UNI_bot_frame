@@ -10,8 +10,6 @@ import time
 
 client = commands.Bot(command_prefix='!', intents=discord.Intents.all())
 
-paths_list = [["here-is-your-name/cogs", "cogs"]]  # [옮길 파일 위치, 옮겨질 위치]
-
 current_cogs_list = []
 
 project_name = "UNI_bot_frame"  # <<<<< 새 봇 제작시 바꿀 것!!
