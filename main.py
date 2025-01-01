@@ -8,11 +8,12 @@ import traceback
 import time
 
 
-client = commands.Bot(command_prefix='!', intents=discord.Intents.all())
+bot = commands.Bot(command_prefix='!', intents=discord.Intents.all())
 
 current_cogs_list = []
 
 project_name = "UNI_bot_frame"  # <<<<< 새 봇 제작시 바꿀 것!!
+develop_server_ids = []
 
 
 def print_log(text):
@@ -25,27 +26,34 @@ def on_rm_error(func, path, exc_info):
     os.unlink(path)
 
 
-def load_all_cogs():
+def initial_cog_load():
     global current_cogs_list
-    for i in os.listdir("cogs"):
-        if i.endswith(".py"):
-            client.load_extension(f"cogs.{i.split('.')[0]}")
-            current_cogs_list.append(i)
+    with open("cogs/initial_cog_list.txt") as f:
+        for i in f.readline():
+            try:
+                bot.load_extension(f"cogs.{i.split('.')[0]}")
+                current_cogs_list.append(i)
+
+            except ExtensionNotFound:
+                print_log(f"[ERROR] {i} not found.")
+
+            except ExtensionAlreadyLoaded:
+                print_log(f"[ERROR] {i} is already loaded.")
 
 
 def unload_all_cogs():
     global current_cogs_list
     for i in current_cogs_list:
-        client.unload_extension(f"cogs.{i.split('.')[0]}")
+        bot.unload_extension(f"cogs.{i.split('.')[0]}")
     current_cogs_list = []
 
 
 # 최초 cog 로딩
-load_all_cogs()
+initial_cog_load()
 print_log(f"bot has been started, loaded cogs : {current_cogs_list}")
 
 
-@client.slash_command()
+@bot.slash_command(default_member_permissions=discord.Permissions(administrator=True), guild_ids=develop_server_ids)
 async def cog_list(ctx):
     avail_cogs_list = []
     for i in os.listdir("cogs"):
@@ -55,11 +63,11 @@ async def cog_list(ctx):
     await ctx.respond("로드 가능한 cog :" + str(avail_cogs_list) + "\n현제 로드된 cog :" + str(current_cogs_list))
 
 
-@client.slash_command()
+@bot.slash_command(default_member_permissions=discord.Permissions(administrator=True), guild_ids=develop_server_ids)
 async def unload_cog(ctx, cog_name: discord.Option(str)):
     global current_cogs_list
     try:
-        client.unload_extension(f"cogs.{cog_name}")
+        bot.unload_extension(f"cogs.{cog_name}")
         current_cogs_list.remove(f"{cog_name}.py")
         print_log(f"{cog_name} has been unloaded")
         await ctx.respond(f"{cog_name}을 언로드 하였습니다.")
@@ -72,16 +80,16 @@ async def unload_cog(ctx, cog_name: discord.Option(str)):
 
     except Exception:
         error_log = traceback.format_exc(limit=None, chain=True)
-        cart = client.get_user(344384179552780289)
+        cart = bot.get_user(344384179552780289)
         print_log(f"error has been occurred")
         await cart.send("```" + "\n" "사용자 = " + ctx.author.name + "\n" + str(error_log) + "```")
 
 
-@client.slash_command()
+@bot.slash_command(default_member_permissions=discord.Permissions(administrator=True), guild_ids=develop_server_ids)
 async def load_cog(ctx, cog_name: discord.Option(str)):
     global current_cogs_list
     try:
-        client.load_extension(f"cogs.{cog_name}")
+        bot.load_extension(f"cogs.{cog_name}")
         current_cogs_list.append(f"{cog_name}.py")
         print_log(f"{cog_name} has been loaded")
         await ctx.respond(f"{cog_name}을 로드 하였습니다.")
@@ -94,12 +102,12 @@ async def load_cog(ctx, cog_name: discord.Option(str)):
 
     except Exception:
         error_log = traceback.format_exc(limit=None, chain=True)
-        cart = client.get_user(344384179552780289)
+        cart = bot.get_user(344384179552780289)
         print_log(f"error has been occurred")
         await cart.send("```" + "\n" "사용자 = " + ctx.author.name + "\n" + str(error_log) + "```")
 
 
-@client.slash_command()
+@bot.slash_command(default_member_permissions=discord.Permissions(administrator=True), guild_ids=develop_server_ids)
 async def update(ctx):
     try:
         if os.path.exists(project_name):    # 다운로드 폴더 확인
@@ -118,14 +126,14 @@ async def update(ctx):
         shutil.rmtree(project_name, onerror=on_rm_error)
 
         unload_all_cogs()
-        load_all_cogs()
+        initial_cog_load()
 
         print_log("update completed")
         await ctx.respond("업데이트가 완료되었습니다.")
 
     except Exception:
         error_log = traceback.format_exc(limit=None, chain=True)
-        cart = client.get_user(344384179552780289)
+        cart = bot.get_user(344384179552780289)
         print_log(f"error has been occurred")
         await cart.send("```" + "\n" "사용자 = " + ctx.author.name + "\n" + str(error_log) + "```")
 
@@ -134,4 +142,4 @@ with open('token.txt', 'r') as f:
     token = f.read()
 
 
-client.run(token)
+bot.run(token)
